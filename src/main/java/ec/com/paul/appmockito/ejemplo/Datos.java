@@ -1,4 +1,4 @@
-package ec.com.paul.appmockito.ejemplo.services;
+package ec.com.paul.appmockito.ejemplo;
 
 
 

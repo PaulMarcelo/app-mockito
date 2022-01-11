@@ -2,7 +2,9 @@ package ec.com.paul.appmockito.ejemplo.services;
 
 import ec.com.paul.appmockito.ejemplo.models.Examen;
 import ec.com.paul.appmockito.ejemplo.repositories.ExamenRepository;
+import ec.com.paul.appmockito.ejemplo.repositories.ExamenRepositoryImpl;
 import ec.com.paul.appmockito.ejemplo.repositories.PreguntaRepository;
+import ec.com.paul.appmockito.ejemplo.repositories.PreguntarepositoryImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,23 +13,25 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 
-import static ec.com.paul.appmockito.ejemplo.services.Datos.*;
-import static org.mockito.Mockito.*;
-
 import java.util.Optional;
 
+import static ec.com.paul.appmockito.ejemplo.Datos.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ExamenServiceImplTest {
 
     @Mock
-    private ExamenRepository examenRepository;
+    private ExamenRepositoryImpl examenRepository;
     @Mock
-    private PreguntaRepository preguntaRepository;
+    private PreguntarepositoryImpl preguntaRepository;
 
     @InjectMocks
     private ExamenServiceImpl service;
+
+    @Captor
+    ArgumentCaptor<Long> captor;
 
     @BeforeEach
     void setUp() {
@@ -164,5 +168,58 @@ class ExamenServiceImplTest {
                     arg + " debe se run numero positivo";
         }
     }
+
+    @Test
+    void testArgumentCaptor() {
+        when(this.examenRepository.findAll()).thenReturn(EXAMENES);
+        //when(this.preguntaRepository.findPreguntasPorExamenId(anyLong())).thenReturn(PREGUNTAS);
+
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+        //   ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+        verify(this.preguntaRepository).findPreguntasPorExamenId(captor.capture());
+        assertEquals(5L, captor.getValue());
+
+    }
+
+
+    @Test
+    void testDoThrow() {
+        Examen examen = EXAMEN;
+        examen.setPreguntas(PREGUNTAS);
+        //when(this.preguntaRepository.guardarVarias()).thenThrow(IllegalArgumentException.class);
+        doThrow(IllegalArgumentException.class).when(this.preguntaRepository).guardarVarias(anyList());
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            this.service.guardar(examen);
+        });
+    }
+
+    @Test
+    void testDoAnswer() {
+        when(this.examenRepository.findAll()).thenReturn(EXAMENES);
+        //when(this.preguntaRepository.findPreguntasPorExamenId(anyLong())).thenReturn(PREGUNTAS);
+        doAnswer((invocation) -> {
+            Long id = invocation.getArgument(0);
+            return id == 5L ? PREGUNTAS : null;
+        }).when(this.preguntaRepository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen = this.service.findExamenPorNombreConPreguntas("Matemáticas");
+        assertEquals(5L, examen.getId());
+        assertEquals("Matemáticas", examen.getNombre());
+         
+    }
+
+    @Test
+    void testDoCallrealMethod() {
+        when(this.examenRepository.findAll()).thenReturn(EXAMENES);
+        //when(this.preguntaRepository.findPreguntasPorExamenId(anyLong())).thenReturn(PREGUNTAS);
+        doCallRealMethod().when(this.preguntaRepository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen = this.service.findExamenPorNombreConPreguntas("Matemáticas");
+        assertEquals(5L, examen.getId());
+        assertEquals("Matemáticas", examen.getNombre());
+    }
+
+
 
 }
