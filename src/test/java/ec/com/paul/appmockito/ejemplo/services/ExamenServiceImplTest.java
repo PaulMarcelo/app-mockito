@@ -13,6 +13,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
 
+import java.util.Collections;
 import java.util.Optional;
 
 import static ec.com.paul.appmockito.ejemplo.Datos.*;
@@ -219,6 +220,84 @@ class ExamenServiceImplTest {
         assertEquals(5L, examen.getId());
         assertEquals("Matemáticas", examen.getNombre());
     }
+
+    @Test
+    void testSpy() {
+        ExamenRepository examenRepository = spy(ExamenRepositoryImpl.class);
+        PreguntaRepository preguntaRepository = spy(PreguntarepositoryImpl.class);
+        ExamenService examenService = new ExamenServiceImpl(examenRepository, preguntaRepository);
+
+        //when(preguntaRepository.findPreguntasPorExamenId(anyLong())).thenReturn(PREGUNTAS);
+        doReturn(PREGUNTAS).when(preguntaRepository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen= examenService.findExamenPorNombreConPreguntas("Matemáticas");
+        assertEquals(5,examen.getId());
+        assertEquals("Matemáticas", examen.getNombre());
+        assertEquals(5, examen.getPreguntas().size());
+        assertTrue(examen.getPreguntas().contains("Aritmetica"));
+        verify(examenRepository).findAll();
+        verify(preguntaRepository).findPreguntasPorExamenId(anyLong());
+    }
+
+    @Test
+    void testOrdenInvocacion() {
+        when(this.examenRepository.findAll()).thenReturn(EXAMENES);
+
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+        this.service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(preguntaRepository);
+        inOrder.verify(preguntaRepository).findPreguntasPorExamenId(5L);
+        inOrder.verify(preguntaRepository).findPreguntasPorExamenId(6L);
+    }
+
+    @Test
+    void testOrdenInvocacion2() {
+        when(this.examenRepository.findAll()).thenReturn(EXAMENES);
+
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+        this.service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(examenRepository, preguntaRepository);
+        inOrder.verify(examenRepository).findAll();
+        inOrder.verify(preguntaRepository).findPreguntasPorExamenId(5L);
+        inOrder.verify(examenRepository).findAll();
+        inOrder.verify(preguntaRepository).findPreguntasPorExamenId(6L);
+    }
+
+    @Test
+    void testNumeroInvocaciones() {
+        when(examenRepository.findAll()).thenReturn(EXAMENES);
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+
+        verify(preguntaRepository, times(1)).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atLeast(1)).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atLeastOnce()).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atMost(1)).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atMostOnce()).findPreguntasPorExamenId(5L);
+    }
+
+    @Test
+    void testNumeroInvocaciones2() {
+        when(examenRepository.findAll()).thenReturn(EXAMENES);
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+
+        verify(preguntaRepository, times(2)).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atLeast(1)).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atLeastOnce()).findPreguntasPorExamenId(5L);
+        verify(preguntaRepository, atMost(2)).findPreguntasPorExamenId(5L);
+        //verify(preguntaRepository, atMostOnce()).findPreguntasPorExamenId(5L);
+    }
+
+    @Test
+    void testNumeroInvocaciones3() {
+        when(examenRepository.findAll()).thenReturn(Collections.emptyList());
+        this.service.findExamenPorNombreConPreguntas("Matemáticas");
+
+        verify(preguntaRepository, never()).findPreguntasPorExamenId(5L);
+        verifyNoInteractions(preguntaRepository);
+    }
+
 
 
 
